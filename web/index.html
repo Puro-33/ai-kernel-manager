@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#24344b" />
+    <title>Kernel Deck · AI 세션 작업대</title>
+    <link rel="stylesheet" href="/app.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">작업대로 이동</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="세션 탐색">
+        <a class="brand" href="/" aria-label="Kernel Deck 홈">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span>Kernel <strong>Deck</strong><small>AI 세션 작업대</small></span>
+        </a>
+        <button class="button new-session" id="new-session" type="button"><span aria-hidden="true">＋</span> 새 세션</button>
+        <div class="session-navigation">
+          <div class="section-label"><h2>내 세션</h2><span id="session-count">0</span></div>
+          <label class="search-field"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input id="session-search" type="search" placeholder="이름, 그룹, 명령 검색" aria-label="세션 검색" autocomplete="off" /></label>
+          <div class="filter-tabs" role="group" aria-label="세션 상태 필터">
+            <button type="button" data-filter="all" aria-pressed="true">전체</button>
+            <button type="button" data-filter="active" aria-pressed="false">실행·대기</button>
+            <button type="button" data-filter="attention" aria-pressed="false">확인 필요</button>
+          </div>
+          <div class="session-list" id="session-list"></div>
+        </div>
+        <div class="sidebar-footer">
+          <button class="external-button" id="external-processes" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 16v5m-5-13 3 3-3 3m6 0h4"></path></svg>외부 AI 프로세스 확인</button>
+          <p>이곳에서 시작한 세션은 브라우저를 닫아도 계속 실행됩니다.</p>
+        </div>
+      </aside>
+      <main class="main-workspace" id="workspace" tabindex="-1">
+        <header class="workspace-header">
+          <div><h1>작업대</h1><p id="workspace-summary">세션에 연결하는 중입니다.</p></div>
+          <div class="global-actions">
+            <label class="limit-field" for="concurrency-limit">동시 실행 <input id="concurrency-limit" type="number" min="1" max="16" value="4" inputmode="numeric" /><span>개</span></label>
+            <button class="button button-quiet danger-text" id="stop-all" type="button">모두 종료</button>
+          </div>
+        </header>
+        <div class="connection-alert" id="connection-alert" role="status" hidden><span id="connection-alert-text"></span><button class="text-button" id="retry-connection" type="button">다시 연결</button></div>
+        <div class="workspace-toolbar">
+          <div class="view-controls" role="group" aria-label="터미널 보기">
+            <button class="view-button" id="grid-view" type="button" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>분할 보기</button>
+            <button class="view-button" id="focus-view" type="button" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 8h18"></path></svg>집중 보기</button>
+          </div>
+          <span class="selection-hint" id="selection-hint">최대 4개 세션을 함께 봅니다</span>
+        </div>
+        <div class="terminal-grid" id="terminal-grid" aria-label="선택한 터미널"></div>
+        <section class="empty-state" id="empty-state" hidden>
+          <div class="empty-terminal" aria-hidden="true"><div><i></i><i></i><i></i></div><span>› <b>_</b></span></div>
+          <h2 id="empty-title">여러 AI, 하나의 작업대.</h2>
+          <p id="empty-description">Codex, Claude Code, Gemini CLI를 나란히 실행하고<br />입력과 상태를 한곳에서 관리하세요.</p>
+          <button class="button button-primary" id="empty-create" type="button">첫 세션 만들기 <span aria-hidden="true">＋</span></button>
+          <div class="empty-presets" id="empty-presets"></div>
+        </section>
+        <footer class="status-bar"><span class="connection-indicator" id="connection-status" role="status"><i></i><span>연결 중</span></span><span id="platform-label"></span><span class="keyboard-hint">터미널을 클릭해 입력 <span aria-hidden="true">·</span> <kbd>Ctrl</kbd> + <kbd>C</kbd> 실행 중단</span></footer>
+      </main>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="false"></div>
+    <dialog id="session-dialog" class="session-dialog">
+      <form id="session-form">
+        <div class="dialog-header"><div><h2 id="session-dialog-title">새 세션</h2><p>실행할 CLI와 작업 폴더를 지정하세요.</p></div><button class="icon-button dialog-close" type="button" aria-label="닫기">×</button></div>
+        <div class="dialog-body">
+          <label class="form-field">CLI 프리셋<select name="preset" id="preset-select"></select><span class="field-hint" id="preset-description">설치된 CLI를 선택하거나 직접 명령을 지정하세요.</span></label>
+          <div class="form-row"><label class="form-field">세션 이름<input name="name" id="session-name" required maxlength="120" placeholder="예: API 구현" autocomplete="off" /></label><label class="form-field">그룹 <span class="optional">선택</span><input name="group" id="session-group" maxlength="80" placeholder="예: 프로젝트 A" autocomplete="off" /></label></div>
+          <label class="form-field">실행 파일<input name="command" id="session-command" required placeholder="예: codex 또는 실행 파일의 전체 경로" spellcheck="false" autocomplete="off" /><span class="field-hint">프로그램 이름이나 경로만 입력하세요. 옵션은 아래에 입력합니다.</span></label>
+          <label class="form-field">인수 <span class="optional">선택</span><textarea name="args" id="session-args" rows="3" placeholder="--model&#10;o3" spellcheck="false"></textarea><span class="field-hint">한 줄에 인수 하나씩, 따옴표로 감싸지 않고 입력하세요.</span></label>
+          <label class="form-field">작업 폴더<input name="cwd" id="session-cwd" required placeholder="프로젝트 폴더의 전체 경로" spellcheck="false" autocomplete="off" /></label>
+          <label class="checkbox-field" id="auto-start-field"><input id="session-auto-start" type="checkbox" checked />만든 후 바로 실행 <span>한도를 넘으면 대기열에 추가됩니다.</span></label>
+          <p id="session-form-error" class="form-error" role="alert" hidden></p>
+        </div>
+        <div class="dialog-footer"><button class="button button-quiet dialog-close" type="button">취소</button><button class="button button-primary" id="save-session" type="submit">세션 만들기</button></div>
+      </form>
+    </dialog>
+    <dialog id="confirm-dialog" class="confirm-dialog">
+      <form method="dialog"><div class="dialog-header"><h2 id="confirm-title">확인</h2></div><div class="dialog-body"><p id="confirm-message"></p></div><div class="dialog-footer"><button class="button button-quiet" value="cancel">취소</button><button class="button button-danger" id="confirm-accept" value="confirm">확인</button></div></form>
+    </dialog>
+    <dialog id="process-dialog" class="process-dialog">
+      <div class="dialog-header"><div><h2>외부 AI 프로세스</h2><p>다른 터미널에서 실행 중인 CLI를 확인합니다.</p></div><button class="icon-button dialog-close" type="button" aria-label="닫기">×</button></div>
+      <div class="dialog-body"><div class="process-note">외부에서 시작한 프로세스는 조회만 할 수 있습니다. 입력과 종료는 해당 터미널에서 진행하세요.</div><p class="field-hint">프로세스 목록에는 이 작업대에서 실행한 CLI도 표시될 수 있습니다.</p><div id="process-content" aria-live="polite"></div></div>
+      <div class="dialog-footer"><button class="button button-quiet" id="refresh-processes" type="button">새로고침</button><button class="button button-primary dialog-close" type="button">닫기</button></div>
+    </dialog>
+  </body>
+</html>
